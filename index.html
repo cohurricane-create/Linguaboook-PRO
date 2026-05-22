@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LinguaBook PRO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#0f1117;color:white;overflow:hidden;}
+header{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:#161b24;border-bottom:1px solid rgba(255,255,255,0.05);}
+.logo{font-size:22px;font-weight:700;}
+.wrapper{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 72px);}
+.sidebar{padding:16px;border-right:1px solid rgba(255,255,255,0.05);overflow:auto;background:#141923;}
+.content{padding:18px;overflow:hidden;}
+.card{background:#1a202c;border:1px solid rgba(255,255,255,0.05);border-radius:18px;padding:16px;margin-bottom:14px;}
+.title{font-size:14px;font-weight:600;margin-bottom:12px;}
+.input{width:100%;padding:12px;background:#252d3d;border:none;border-radius:12px;color:white;outline:none;font-size:13px;}
+.upload{border:2px dashed rgba(255,255,255,0.12);border-radius:14px;padding:28px 16px;text-align:center;cursor:pointer;transition:0.25s;}
+.upload:hover{border-color:#5b8cff;background:#20283a;}
+.lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.lang-btn{background:#252d3d;border:none;color:white;padding:10px;border-radius:10px;cursor:pointer;transition:0.2s;font-size:13px;}
+.lang-btn.active{background:#5b8cff;}
+.translate-btn{width:100%;margin-top:14px;padding:13px;background:#5b8cff;border:none;color:white;font-weight:600;border-radius:12px;cursor:pointer;font-size:14px;}
+.progress{margin-top:14px;height:6px;background:#252d3d;border-radius:999px;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:#5b8cff;transition:0.3s;}
+.status{margin-top:10px;font-size:12px;color:#a8b3c7;}
+.error{margin-top:8px;color:#ff6b6b;font-size:12px;}
+.viewer{display:grid;grid-template-columns:1fr 1fr;gap:18px;height:100%;}
+.panel{background:#161c28;border:1px solid rgba(255,255,255,0.05);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;}
+.panel-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05);font-weight:600;}
+.panel-body{flex:1;overflow:auto;padding:20px;}
+.page{margin-bottom:36px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:20px;}
+.page canvas{width:100%;height:auto;display:block;border-radius:12px;margin-bottom:12px;}
+.translation-text{line-height:1.8;white-space:pre-wrap;font-size:14px;}
+.live{display:inline-flex;align-items:center;gap:8px;background:#163021;color:#63ff9a;padding:8px 12px;border-radius:999px;font-size:12px;margin-bottom:14px;}
+.dot{width:8px;height:8px;border-radius:50%;background:#63ff9a;animation:pulse 1s infinite;}
+@keyframes pulse{0%{opacity:0.2}50%{opacity:1}100%{opacity:0.2}}
+.translation-header{display:flex;align-items:center;justify-content:space-between;}
+.reader-btn{width:36px;height:36px;border:none;border-radius:10px;background:#222b3d;color:white;cursor:pointer;font-size:17px;transition:0.25s;}
+.reader-btn:hover{background:#5b8cff;transform:scale(1.05);}
+
+/* READER */
+.reader-overlay{position:fixed;inset:0;background:rgba(5,8,15,0.85);backdrop-filter:blur(12px);z-index:99999;display:none;align-items:center;justify-content:center;padding:24px;}
+.reader-overlay.active{display:flex;}
+.reader-modal{width:min(1400px,100%);height:min(94vh,100%);background:#111827;border:1px solid rgba(255,255,255,0.06);border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 120px rgba(0,0,0,0.6);animation:readerShow .25s ease;}
+@keyframes readerShow{from{transform:translateY(20px) scale(.98);opacity:0;}to{transform:none;opacity:1;}}
+.reader-top{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid rgba(255,255,255,0.06);background:#131c2b;flex-shrink:0;}
+.reader-title{font-size:17px;font-weight:700;}
+.reader-top-tools{display:flex;align-items:center;gap:8px;}
+.rtool-btn{height:36px;padding:0 12px;border:none;border-radius:10px;background:#222b3d;color:white;cursor:pointer;font-size:13px;transition:0.2s;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.rtool-btn:hover{background:#5b8cff;}
+.rtool-btn.active{background:#5b8cff;}
+.reader-close{width:36px;height:36px;border:none;border-radius:10px;background:#20283a;color:white;font-size:18px;cursor:pointer;transition:.2s;}
+.reader-close:hover{background:#ff5c5c;}
+.reader-body{flex:1;display:flex;overflow:hidden;}
+.reader-content{flex:1;overflow-y:auto;padding:50px;transition:padding 0.3s;}
+.reader-content .translation-text{font-size:19px;line-height:2.1;max-width:860px;margin:auto;color:#f2f5ff;}
+.reader-content .page{border:none;margin-bottom:56px;}
+.reader-content .page canvas{width:100%;border-radius:12px;margin-bottom:14px;}
+
+/* CHAT */
+.chat-panel{width:0;overflow:hidden;border-left:1px solid rgba(255,255,255,0.06);background:#0d1420;display:flex;flex-direction:column;transition:width 0.3s ease;flex-shrink:0;}
+.chat-panel.open{width:380px;}
+.chat-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.chat-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.chat-msg{padding:10px 13px;border-radius:13px;font-size:13px;line-height:1.6;max-width:95%;}
+.chat-msg.user{background:#1e3a5f;align-self:flex-end;}
+.chat-msg.ai{background:#1a2234;align-self:flex-start;color:#d4e0f7;}
+.chat-msg.thinking{color:#7aa2ff;font-style:italic;}
+.chat-input-row{padding:10px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;flex-shrink:0;}
+.chat-input{flex:1;padding:9px 13px;background:#1a2234;border:none;border-radius:11px;color:white;outline:none;font-size:13px;}
+.chat-send{width:38px;height:38px;border:none;border-radius:11px;background:#5b8cff;color:white;cursor:pointer;font-size:17px;}
+.chat-send:hover{background:#4a7de8;}
+
+/* HIGHLIGHT TOOLBAR */
+.highlight-toolbar{position:fixed;z-index:9999999;background:#1a2234;border:1px solid rgba(91,140,255,0.3);border-radius:12px;padding:6px 8px;display:none;gap:6px;align-items:center;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+.highlight-toolbar.visible{display:flex;}
+.ht-btn{padding:5px 10px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;transition:0.2s;}
+.ht-btn.yellow{background:#f5c842;color:#1a1a00;}
+.ht-btn.yellow:hover{background:#e0b430;}
+.ht-btn.green{background:#42f587;color:#001a0e;}
+.ht-btn.green:hover{background:#30d470;}
+.ht-btn.ask{background:#5b8cff;color:white;}
+.ht-btn.ask:hover{background:#4a7de8;}
+.ht-btn.remove{background:#ff5c5c;color:white;}
+.ht-btn.remove:hover{background:#e04444;}
+.ht-sep{width:1px;height:20px;background:rgba(255,255,255,0.12);}
+mark.hl-yellow{background:#f5c84288;color:inherit;border-radius:3px;padding:0 2px;cursor:pointer;}
+mark.hl-green{background:#42f58788;color:inherit;border-radius:3px;padding:0 2px;cursor:pointer;}
+mark.hl-hidden{background:transparent!important;text-decoration:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📚 LinguaBook PRO</div>
+  <div style="font-size:13px;color:#9fb1cc;">AI Book Translator</div>
+</header>
+
+<div class="wrapper">
+  <div class="sidebar">
+    <div class="card">
+      <div class="title">API Key (OpenAI)</div>
+      <input class="input" id="apiKey" type="password" placeholder="sk-proj-...">
+    </div>
+    <div class="card">
+      <div class="title">Kitob yuklash</div>
+      <label class="upload">
+        <input hidden id="fileInput" type="file" accept=".pdf,.txt">
+        <div>
+          <div style="font-size:36px;margin-bottom:10px;">📖</div>
+          <div style="font-weight:600;margin-bottom:4px;font-size:14px;">PDF yoki TXT yuklang</div>
+          <div style="font-size:12px;color:#a7b3c9;">Drag & Drop ishlaydi</div>
+        </div>
+      </label>
+      <div class="status" id="fileStatus"></div>
+      <div class="error" id="error"></div>
+    </div>
+    <div class="card">
+      <div class="title">Tarjima tili</div>
+      <div class="lang-grid" id="langGrid"></div>
+      <button class="translate-btn" onclick="startTranslation()">⚡ Tarjima qilish</button>
+      <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="viewer">
+      <div class="panel">
+        <div class="panel-header">📘 Original PDF</div>
+        <div class="panel-body" id="originalViewer"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header translation-header">
+          <div>🌍 Translation</div>
+          <button class="reader-btn" onclick="openReaderMode()">⛶</button>
+        </div>
+        <div class="panel-body" id="translatedViewer">
+          <div class="live"><div class="dot"></div>Live translation preview</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- READER OVERLAY -->
+<div class="reader-overlay" id="readerOverlay">
+  <div class="reader-modal">
+    <div class="reader-top">
+      <div class="reader-title">📖 O'qish rejimi</div>
+      <div class="reader-top-tools">
+        <button class="rtool-btn" id="highlightBtn" onclick="toggleHighlightMode()">🖊 Belgilash</button>
+        <button class="rtool-btn" id="hideHlBtn" onclick="toggleHighlightsVisible()" title="Highlight'larni yashir/ko'rsat">👁</button>
+        <button class="rtool-btn" id="chatToggleBtn" onclick="toggleChat()">🤖 AI Tahlil</button>
+        <button class="rtool-btn" onclick="downloadTXT()" title="Tarjimani yuklab olish">⬇ Yuklab olish</button>
+        <button class="reader-close" onclick="closeReaderMode()">✕</button>
+      </div>
+    </div>
+    <div class="reader-body">
+      <div class="reader-content" id="readerContent"></div>
+      <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">🤖 AI Kitob Tahlilchi</div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-msg ai">Salom! Kitob haqida savol bering. Matn belgilab "Ask AI" bosishingiz ham mumkin.</div>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chatInput" placeholder="Savol yozing..." onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="chat-send" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Highlight Toolbar -->
+<div class="highlight-toolbar" id="highlightToolbar">
+  <button class="ht-btn yellow" onclick="applyHighlight('yellow')">🟡 Sariq</button>
+  <button class="ht-btn green" onclick="applyHighlight('green')">🟢 Yashil</button>
+  <div class="ht-sep"></div>
+  <button class="ht-btn ask" onclick="askAiFromSelection()">🤖 Ask AI</button>
+  <div class="ht-sep"></div>
+  <button class="ht-btn remove" onclick="removeHighlight()">✕</button>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const LANGUAGES = ['Uzbek','English','Russian','Turkish','Arabic','German','French','Spanish','Japanese','Korean','Chinese'];
+
+let selectedLanguage = null;
+let selectedFile = null;
+let pdfPages = [];           // {page, text, canvas}
+let translatedPages = [];    // {page, text, canvas} — grows as translation runs
+let highlightMode = false;
+let highlightsVisible = true;
+let currentSel = null;
+let bookContext = '';
+let readerOpen = false;
+
+// ── Lang buttons ──
+const langGrid = document.getElementById('langGrid');
+LANGUAGES.forEach(lang => {
+  const btn = document.createElement('button');
+  btn.className = 'lang-btn';
+  btn.innerText = lang;
+  btn.onclick = () => {
+    document.querySelectorAll('.lang-btn').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    selectedLanguage = lang;
+  };
+  langGrid.appendChild(btn);
+});
+
+document.getElementById('fileInput').addEventListener('change', async e => {
+  selectedFile = e.target.files[0];
+  if (!selectedFile) return;
+  await loadBook();
+});
+
+async function loadBook() {
+  try {
+    pdfPages = []; translatedPages = [];
+    const ext = selectedFile.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') await loadPDF(selectedFile);
+    else if (ext === 'txt') await loadTXT(selectedFile);
+  } catch(err) { console.error(err); showError('Fayl yuklashda xatolik'); }
+}
+
+async function loadTXT(file) {
+  const text = await file.text();
+  const sentences = text.match(/[^.!?]*[.!?]+/g) || [text];
+  const chunks = [];
+  let current = '';
+  sentences.forEach(s => {
+    if ((current + s).length > 2500) { if (current) chunks.push(current.trim()); current = s; }
+    else current += s;
+  });
+  if (current.trim()) chunks.push(current.trim());
+  chunks.forEach((chunk, i) => pdfPages.push({page:i+1, text:chunk, canvas:null}));
+  renderOriginal();
+}
+
+async function loadPDF(file) {
+  setStatus('📖 PDF o\'qilmoqda...');
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buffer}).promise;
+  for (let i = 1; i <= pdf.numPages; i++) {
+    setStatus(`📄 Loading page ${i}/${pdf.numPages}`);
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({scale:1.3});
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({canvasContext:ctx, viewport}).promise;
+    const textContent = await page.getTextContent();
+    // Extract text, filtering out standalone page numbers
+    let rawItems = textContent.items.map(it => it.str).filter(s => s.trim());
+    // Remove items that are purely page numbers (short numeric strings)
+    let text = rawItems.filter(s => !/^\s*\d{1,4}\s*$/.test(s)).join(' ');
+    text = text.replace(/\s+/g,' ').trim();
+    pdfPages.push({page:i, text, canvas});
+  }
+  if (pdfPages.length === 0) { showError('PDF text topilmadi'); return; }
+  setStatus(`✅ ${pdfPages.length} sahifa yuklandi`);
+  renderOriginal();
+}
+
+function renderOriginal() {
+  const viewer = document.getElementById('originalViewer');
+  viewer.innerHTML = '';
+  pdfPages.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'page';
+    if (p.canvas) div.appendChild(p.canvas);
+    else div.innerHTML = `<div class="translation-text">${p.text}</div>`;
+    viewer.appendChild(div);
+  });
+}
+
+// ── TRANSLATION ──
+async function startTranslation() {
+  hideError();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { showError('API key kiriting'); return; }
+  if (!selectedFile) { showError('Fayl yuklang'); return; }
+  if (!selectedLanguage) { showError('Til tanlang'); return; }
+  if (pdfPages.length === 0) { showError('Text topilmadi'); return; }
+
+  translatedPages = [];
+  bookContext = '';
+
+  const tv = document.getElementById('translatedViewer');
+  tv.innerHTML = `<div class="live"><div class="dot"></div>Translation running...</div>`;
+
+  for (let i = 0; i < pdfPages.length; i++) {
+    const page = pdfPages[i];
+    const progress = Math.round(((i+1)/pdfPages.length)*100);
+    setStatus(`⚡ Translating ${i+1}/${pdfPages.length}`);
+    document.getElementById('progressFill').style.width = progress + '%';
+
+    try {
+      let translated = '';
+      if (page.text && page.text.length > 5) {
+        translated = await translateText(apiKey, page.text, selectedLanguage);
+      }
+      const tPage = {page: page.page, text: translated, canvas: page.canvas};
+      translatedPages.push(tPage);
+      bookContext += (translated ? translated + '\n\n' : '');
+      appendTranslatedPage(tPage, tv);
+      if (readerOpen) appendToReader(tPage);
+    } catch(err) {
+      console.error(err);
+      const tPage = {page: page.page, text:'', canvas: page.canvas};
+      translatedPages.push(tPage);
+      appendTranslatedPage(tPage, tv);
+      if (readerOpen) appendToReader(tPage);
+    }
+  }
+
+  setStatus('✅ Translation completed');
+}
+
+function appendTranslatedPage(tPage, container) {
+  const pageDiv = document.createElement('div');
+  pageDiv.className = 'page';
+  pageDiv.dataset.pageId = tPage.page;
+
+  if (tPage.canvas) {
+    const cloned = cloneCanvas(tPage.canvas);
+    pageDiv.appendChild(cloned);
+    if (tPage.text) {
+      const textEl = document.createElement('div');
+      textEl.className = 'translation-text';
+      textEl.style.marginTop = '10px';
+      textEl.innerText = tPage.text;
+      pageDiv.appendChild(textEl);
+    }
+  } else {
+    if (tPage.text) {
+      const textEl = document.createElement('div');
+      textEl.className = 'translation-text';
+      textEl.innerText = tPage.text;
+      pageDiv.appendChild(textEl);
+    }
+  }
+
+  container.appendChild(pageDiv);
+  pageDiv.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function translateText(apiKey, text, target) {
+  const prompt = `Translate the following book text into ${target}.\n\nRules:\n- natural, fluent translation\n- preserve meaning and formatting\n- no explanations, no extra text\n- only the translated text\n\nTEXT:\n${text}`;
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+    body: JSON.stringify({
+      model:'gpt-4o-mini',
+      messages:[
+        {role:'system', content:'You are a professional literary translator.'},
+        {role:'user', content:prompt}
+      ],
+      temperature:0.3
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// ── DOWNLOAD PDF with original images + translation + highlights ──
+async function downloadTXT() {
+  if (translatedPages.length === 0) { alert('Avval tarjima qiling'); return; }
+
+  const btn = document.querySelector('.rtool-btn[onclick="downloadTXT()"]');
+  if (btn) { btn.innerText = '⏳ Yuklanmoqda...'; btn.disabled = true; }
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 40;
+    const contentW = pageW - margin * 2;
+
+    // Get highlights from reader
+    const hlMap = {}; // pageId -> [{text, color}]
+    const rc = document.getElementById('readerContent');
+    rc.querySelectorAll('.page').forEach(pageEl => {
+      const pid = pageEl.dataset.pageId;
+      const marks = pageEl.querySelectorAll('mark.hl-yellow, mark.hl-green');
+      if (marks.length > 0) {
+        hlMap[pid] = Array.from(marks).map(m => ({
+          text: m.textContent,
+          color: m.classList.contains('hl-yellow') ? '#f5c842' : '#42f587'
+        }));
+      }
+    });
+
+    let isFirst = true;
+
+    for (let i = 0; i < translatedPages.length; i++) {
+      const tp = translatedPages[i];
+      if (!tp.text && !tp.canvas) continue;
+
+      if (!isFirst) pdf.addPage();
+      isFirst = false;
+
+      let y = margin;
+
+      // 1) Original page image — correct aspect ratio
+      if (tp.canvas) {
+        const imgData = tp.canvas.toDataURL('image/jpeg', 0.85);
+        const ratio = tp.canvas.height / tp.canvas.width;
+        // Use full content width, height follows ratio exactly
+        const imgW = contentW;
+        const imgH = imgW * ratio;
+        // If image too tall for page, scale down proportionally
+        const maxImgH = pageH * 0.5;
+        const finalW = imgH > maxImgH ? maxImgH / ratio : imgW;
+        const finalH = imgH > maxImgH ? maxImgH : imgH;
+        const imgX = margin + (contentW - finalW) / 2; // center
+        pdf.addImage(imgData, 'JPEG', imgX, y, finalW, finalH);
+        y += finalH + 16;
+
+        // Separator line
+        pdf.setDrawColor(80, 100, 140);
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, y, pageW - margin, y);
+        y += 14;
+      }
+
+      // 2) Translation text with highlights
+      if (tp.text) {
+        const highlights = hlMap[tp.page] || [];
+
+        // Build segments: [{text, highlighted, color}]
+        let remaining = tp.text;
+        const segments = [];
+
+        if (highlights.length === 0) {
+          segments.push({ text: remaining, highlighted: false, color: null });
+        } else {
+          highlights.forEach(hl => {
+            const idx = remaining.indexOf(hl.text);
+            if (idx === -1) return;
+            if (idx > 0) segments.push({ text: remaining.slice(0, idx), highlighted: false, color: null });
+            segments.push({ text: hl.text, highlighted: true, color: hl.color });
+            remaining = remaining.slice(idx + hl.text.length);
+          });
+          if (remaining) segments.push({ text: remaining, highlighted: false, color: null });
+        }
+
+        // Render segments word-wrapped
+        const fontSize = 11;
+        const lineHeight = fontSize * 1.6;
+        pdf.setFontSize(fontSize);
+
+        // Check if we need a new page for text
+        if (y + lineHeight > pageH - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+
+        // Simple approach: render full text, then overlay highlight rects
+        // For simplicity use splitTextToSize and render line by line
+        const fullLines = pdf.splitTextToSize(tp.text, contentW);
+
+        for (const line of fullLines) {
+          if (y + lineHeight > pageH - margin) {
+            pdf.addPage();
+            y = margin;
+          }
+
+          // Check if this line contains any highlighted text
+          let lineRendered = false;
+          for (const seg of segments.filter(s => s.highlighted)) {
+            if (line.includes(seg.text.slice(0, 15))) {
+              // Draw highlight background
+              const lineW = pdf.getStringUnitWidth(line) * fontSize / pdf.internal.scaleFactor;
+              const hlColor = seg.color === '#f5c842' ? [245, 200, 66] : [66, 245, 135];
+              pdf.setFillColor(...hlColor);
+              pdf.rect(margin, y - fontSize + 2, Math.min(lineW + 4, contentW), lineHeight - 2, 'F');
+              break;
+            }
+          }
+
+          pdf.setTextColor(30, 30, 30);
+          pdf.text(line, margin, y);
+          y += lineHeight;
+        }
+
+        // Highlights summary at bottom of page if any
+        if (highlights.length > 0) {
+          y += 10;
+          if (y + 20 > pageH - margin) { pdf.addPage(); y = margin; }
+          pdf.setFontSize(8);
+          pdf.setTextColor(120, 120, 120);
+          highlights.forEach(hl => {
+            const hlLines = pdf.splitTextToSize(`• [${hl.color === '#f5c842' ? '🟡' : '🟢'}] ${hl.text}`, contentW);
+            hlLines.forEach(hl2 => {
+              if (y + 12 > pageH - margin) { pdf.addPage(); y = margin; }
+              pdf.text(hl2, margin, y);
+              y += 12;
+            });
+          });
+        }
+      }
+    }
+
+    const name = selectedFile ? selectedFile.name.replace(/\.[^.]+$/, '') : 'tarjima';
+    pdf.save(`${name}_${selectedLanguage || 'translated'}.pdf`);
+
+  } catch(err) {
+    console.error(err);
+    alert('PDF yaratishda xatolik: ' + err.message);
+  } finally {
+    if (btn) { btn.innerText = '⬇ Yuklab olish'; btn.disabled = false; }
+  }
+}
+
+// ── READER MODE ──
+// Helper: clone canvas preserving aspect ratio via CSS
+function cloneCanvas(src) {
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  c.getContext('2d').drawImage(src, 0, 0);
+  // Preserve aspect ratio — set width to 100%, height auto
+  c.style.width = '100%';
+  c.style.height = 'auto';
+  c.style.display = 'block';
+  c.style.borderRadius = '12px';
+  c.style.marginBottom = '12px';
+  return c;
+}
+
+function openReaderMode() {
+  readerOpen = true;
+  const overlay = document.getElementById('readerOverlay');
+  const rc = document.getElementById('readerContent');
+
+  // Only build if empty (first open)
+  if (rc.children.length === 0) {
+    translatedPages.forEach(tp => appendToReader(tp));
+  }
+
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setupSelectionListener();
+}
+
+function appendToReader(tPage) {
+  const rc = document.getElementById('readerContent');
+
+  if (rc.querySelector(`[data-page-id="${tPage.page}"]`)) return;
+
+  const pageDiv = document.createElement('div');
+  pageDiv.className = 'page';
+  pageDiv.dataset.pageId = tPage.page;
+
+  if (tPage.canvas) {
+    pageDiv.appendChild(cloneCanvas(tPage.canvas));
+    if (tPage.text) {
+      const textEl = document.createElement('div');
+      textEl.className = 'translation-text';
+      textEl.innerText = tPage.text;
+      pageDiv.appendChild(textEl);
+    }
+  } else {
+    if (tPage.text) {
+      const textEl = document.createElement('div');
+      textEl.className = 'translation-text';
+      textEl.innerText = tPage.text;
+      pageDiv.appendChild(textEl);
+    }
+  }
+
+  rc.appendChild(pageDiv);
+}
+
+function closeReaderMode() {
+  readerOpen = false;
+  document.getElementById('readerOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+  hideHighlightToolbar();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReaderMode(); });
+
+// ── AI CHAT ──
+let chatOpen = false;
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chatPanel').classList.toggle('open', chatOpen);
+  document.getElementById('chatToggleBtn').classList.toggle('active', chatOpen);
+}
+
+async function sendChat(prefill) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { alert('API key kiriting'); return; }
+  const input = document.getElementById('chatInput');
+  const question = prefill || input.value.trim();
+  if (!question) return;
+  input.value = '';
+  if (!chatOpen) toggleChat();
+  appendChatMsg(question, 'user');
+  const thinkEl = appendChatMsg('Tahlil qilmoqda...', 'ai thinking');
+  try {
+    const ctx = bookContext.slice(0, 8000);
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+      body: JSON.stringify({
+        model:'gpt-4o-mini',
+        messages:[
+          {role:'system', content:`You are a literary analysis assistant. Book content:\n\n${ctx}\n\nAnswer based on this content.`},
+          {role:'user', content:question}
+        ],
+        temperature:0.5
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    thinkEl.className = 'chat-msg ai';
+    thinkEl.innerText = data.choices?.[0]?.message?.content || 'Javob kelmadi';
+  } catch(err) {
+    thinkEl.className = 'chat-msg ai';
+    thinkEl.innerText = '❌ ' + err.message;
+  }
+}
+
+function appendChatMsg(text, cls) {
+  const msgs = document.getElementById('chatMessages');
+  const el = document.createElement('div');
+  el.className = 'chat-msg ' + cls;
+  el.innerText = text;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+// ── HIGHLIGHT ──
+function setupSelectionListener() {
+  const rc = document.getElementById('readerContent');
+  rc.removeEventListener('mouseup', onTextSelect);
+  rc.addEventListener('mouseup', onTextSelect);
+}
+
+function toggleHighlightMode() {
+  highlightMode = !highlightMode;
+  document.getElementById('highlightBtn').classList.toggle('active', highlightMode);
+}
+
+function toggleHighlightsVisible() {
+  highlightsVisible = !highlightsVisible;
+  const btn = document.getElementById('hideHlBtn');
+  btn.classList.toggle('active', !highlightsVisible);
+  document.querySelectorAll('mark.hl-yellow, mark.hl-green').forEach(m => {
+    m.classList.toggle('hl-hidden', !highlightsVisible);
+  });
+}
+
+function onTextSelect() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || sel.toString().trim().length < 2) {
+    hideHighlightToolbar(); return;
+  }
+  currentSel = sel;
+  const rect = sel.getRangeAt(0).getBoundingClientRect();
+  showHighlightToolbar(rect.left + rect.width/2, rect.top - 54);
+}
+
+function showHighlightToolbar(x, y) {
+  const tb = document.getElementById('highlightToolbar');
+  tb.style.left = Math.max(8, Math.min(x - 130, window.innerWidth - 300)) + 'px';
+  tb.style.top = Math.max(8, y) + 'px';
+  tb.classList.add('visible');
+}
+
+function hideHighlightToolbar() {
+  document.getElementById('highlightToolbar').classList.remove('visible');
+  currentSel = null;
+}
+
+function applyHighlight(color) {
+  if (!currentSel || currentSel.isCollapsed) return;
+  const range = currentSel.getRangeAt(0);
+  const mark = document.createElement('mark');
+  mark.className = `hl-${color}`;
+  if (!highlightsVisible) mark.classList.add('hl-hidden');
+  // Click on mark to select it for removal
+  mark.onclick = (e) => { e.stopPropagation(); selectMark(mark); };
+  try { range.surroundContents(mark); } catch(e) { console.warn('Complex selection'); }
+  window.getSelection().removeAllRanges();
+  hideHighlightToolbar();
+}
+
+function selectMark(mark) {
+  // Show toolbar near the mark to allow removing
+  const rect = mark.getBoundingClientRect();
+  currentSel = null;
+  // Temporarily store mark ref
+  window._selectedMark = mark;
+  showHighlightToolbar(rect.left + rect.width/2, rect.top - 54);
+}
+
+function removeHighlight() {
+  if (window._selectedMark) {
+    const mark = window._selectedMark;
+    const parent = mark.parentNode;
+    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+    parent.removeChild(mark);
+    window._selectedMark = null;
+    hideHighlightToolbar();
+    return;
+  }
+  if (!currentSel || currentSel.isCollapsed) return;
+  const range = currentSel.getRangeAt(0);
+  const marks = document.querySelectorAll('mark.hl-yellow, mark.hl-green');
+  marks.forEach(mark => {
+    if (range.intersectsNode(mark)) {
+      const p = mark.parentNode;
+      while (mark.firstChild) p.insertBefore(mark.firstChild, mark);
+      p.removeChild(mark);
+    }
+  });
+  window.getSelection().removeAllRanges();
+  hideHighlightToolbar();
+}
+
+function askAiFromSelection() {
+  const text = currentSel ? currentSel.toString().trim() : '';
+  hideHighlightToolbar();
+  if (!text) return;
+  sendChat(`Bu qism haqida tushuntir: "${text.slice(0, 400)}"`);
+}
+
+document.addEventListener('mousedown', e => {
+  const tb = document.getElementById('highlightToolbar');
+  if (!tb.contains(e.target)) {
+    // Don't hide if clicking a mark (handled by mark.onclick)
+    if (!e.target.closest('mark')) {
+      window._selectedMark = null;
+      hideHighlightToolbar();
+    }
+  }
+});
+
+function setStatus(t) { document.getElementById('status').innerText = t; }
+function showError(t) { document.getElementById('error').innerText = t; }
+function hideError() { document.getElementById('error').innerText = ''; }
+</script>
+</body>
+</html>
